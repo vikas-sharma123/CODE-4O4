@@ -87,7 +87,7 @@ const navRoutes: Array<{ label: string; href: string; requiresAuth?: boolean }> 
   { label: "Dashboard", href: "/dashboard", requiresAuth: true },
   { label: "Projects", href: "/projects" },
   { label: "Events", href: "/events" },
-  { label: "Sessions", href: "/calendar" },
+  { label: "Sessions", href: "/sessions" },
   { label: "Leaderboard", href: "/leaderboard" },
 ];
 

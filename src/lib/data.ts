@@ -150,32 +150,26 @@ export const upcomingEvents: ClubEvent[] = [
 
 export const calendarSessions: CalendarSession[] = [
   {
-    id: "session-1",
-    date: "2025-01-14",
-    title: "Velocity Sprint Review",
-    type: "Sprint Sync",
-    focus: "Project demos + peer review",
+    id: "html-foundations",
+    date: "2025-11-12",
+    title: "HTML Foundations Live",
+    type: "Workshop",
+    focus:
+      "What is HTML, hyper text, inline vs block elements, semantic tags, fun projects overview, box model.",
   },
   {
-    id: "session-2",
-    date: "2025-01-16",
-    title: "AI Builder Lab",
-    type: "Hands-on Lab",
-    focus: "RAG pipelines with Firebase",
+    id: "css-core-01",
+    date: "2025-11-14",
+    title: "CSS Core Concepts I",
+    type: "Workshop",
+    focus: "Inline vs internal vs external CSS, structuring styles for club projects.",
   },
   {
-    id: "session-3",
-    date: "2025-01-21",
-    title: "Design Systems Guild",
-    type: "Guild Meet",
-    focus: "Tokens, theming, automation",
-  },
-  {
-    id: "session-4",
-    date: "2025-01-25",
-    title: "Founder Fireside",
-    type: "Speaker Series",
-    focus: "Shipping in public",
+    id: "css-core-02",
+    date: "2025-11-19",
+    title: "CSS Core Concepts II",
+    type: "Workshop",
+    focus: "Classes, IDs, specificity + preference, creating shapes (circle demo).",
   },
 ];
 

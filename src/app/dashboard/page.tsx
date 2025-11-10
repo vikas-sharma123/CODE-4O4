@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Bell,
   CalendarDays,
   CheckCircle,
+  Clock,
   Flame,
   Layers,
   ListChecks,
@@ -24,11 +24,13 @@ import {
   showcaseProjects,
   upcomingEvents,
 } from "@/lib/data";
-import {
-  registerProjectInterest,
-  rsvpToEvent,
-} from "@/lib/firebase/firestore";
+import { registerProjectInterest, rsvpToEvent } from "@/lib/firebase/firestore";
 import { formatDate } from "@/lib/utils";
+
+const STORAGE_KEYS = {
+  projects: "project-interest-status",
+  events: "event-rsvp-status",
+};
 
 const navLinks = [
   { label: "Dashboard", icon: Layers, href: "/dashboard" },
@@ -42,6 +44,7 @@ const navLinks = [
 const statCards = [
   { label: "Active Projects", value: 3, icon: Layers, tone: "emerald" },
   { label: "Upcoming Events", value: 3, icon: CalendarDays, tone: "sky" },
+  { label: "Sprint Sessions", value: 4, icon: Clock, tone: "indigo" },
   { label: "Your Points", value: 1500, icon: Trophy, tone: "amber" },
   { label: "Badges Earned", value: 2, icon: CheckCircle, tone: "purple" },
 ];
@@ -49,14 +52,30 @@ const statCards = [
 const toneMap: Record<string, string> = {
   emerald: "from-emerald-400/25 to-emerald-500/10 text-emerald-200",
   sky: "from-sky-400/25 to-sky-500/10 text-sky-200",
+  indigo: "from-indigo-400/25 to-indigo-500/10 text-indigo-200",
   amber: "from-amber-400/25 to-amber-500/10 text-amber-200",
   purple: "from-purple-400/25 to-purple-500/10 text-purple-200",
 };
 
+const readCache = (key: string) => {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = window.localStorage.getItem(key);
+    return stored ? (JSON.parse(stored) as Record<string, string>) : {};
+  } catch (error) {
+    console.warn(`Failed to parse cache for ${key}`, error);
+    return {};
+  }
+};
+
 export default function DashboardPage() {
   const { user, logout } = useAuth();
-  const [projectStatus, setProjectStatus] = useState<Record<string, string>>({});
-  const [eventStatus, setEventStatus] = useState<Record<string, string>>({});
+  const [projectStatus, setProjectStatus] = useState<Record<string, string>>(() =>
+    readCache(STORAGE_KEYS.projects),
+  );
+  const [eventStatus, setEventStatus] = useState<Record<string, string>>(() =>
+    readCache(STORAGE_KEYS.events),
+  );
   const [adminDecisions, setAdminDecisions] = useState<Record<string, string>>(
     {},
   );
@@ -74,10 +93,13 @@ export default function DashboardPage() {
   const handleProjectRequest = async (projectId: string) => {
     setProjectStatus((prev) => ({ ...prev, [projectId]: "sending" }));
     const result = await registerProjectInterest(projectId, user?.id ?? "preview");
-    setProjectStatus((prev) => ({
-      ...prev,
-      [projectId]: result.ok ? "sent" : "error",
-    }));
+    setProjectStatus((prev) => {
+      const next = { ...prev, [projectId]: result.ok ? "sent" : "error" };
+      if (result.ok && typeof window !== "undefined") {
+        window.localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(next));
+      }
+      return next;
+    });
     setToast(result.message);
     setTimeout(() => setToast(null), 2500);
   };
@@ -85,10 +107,13 @@ export default function DashboardPage() {
   const handleEventRsvp = async (eventId: string) => {
     setEventStatus((prev) => ({ ...prev, [eventId]: "sending" }));
     const result = await rsvpToEvent(eventId, user?.id ?? "preview");
-    setEventStatus((prev) => ({
-      ...prev,
-      [eventId]: result.ok ? "sent" : "error",
-    }));
+    setEventStatus((prev) => {
+      const next = { ...prev, [eventId]: result.ok ? "sent" : "error" };
+      if (result.ok && typeof window !== "undefined") {
+        window.localStorage.setItem(STORAGE_KEYS.events, JSON.stringify(next));
+      }
+      return next;
+    });
     setToast(result.message);
     setTimeout(() => setToast(null), 2500);
   };
@@ -169,7 +194,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid gap-4 grid-cols-2 lg:grid-cols-5">
             {statCards.map((card) => (
               <div
                 key={card.label}
@@ -305,7 +330,12 @@ export default function DashboardPage() {
                     </p>
                     <h2 className="text-2xl font-semibold">Sprint calendar</h2>
                   </div>
-                  <Bell className="h-4 w-4 text-white/60" />
+                  <Link
+                    href="/calendar"
+                    className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/80 transition hover:border-emerald-300 hover:text-white"
+                  >
+                    View calendar
+                  </Link>
                 </div>
                 <div className="mt-5 space-y-3">
                   {calendarSessions.map((session) => (

@@ -10,7 +10,7 @@ const authedLinks = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Projects", href: "/projects" },
   { label: "Events", href: "/events" },
-  { label: "Calendar", href: "/calendar" },
+  { label: "Sessions", href: "/sessions" },
   { label: "Leaderboard", href: "/leaderboard" },
   { label: "Admin", href: "/admin" },
 ];
