@@ -105,9 +105,10 @@ const SessionsPage = () => {
               <p className="text-sm text-white/70">{session.description || session.focus || 'Workshop session'}</p>
               <p className="mt-4 text-xs text-white/50">
                 Starts {formatDate(session.date, { month: "long", day: "numeric" })}
-            </p>
-          </article>
-        ))}
+              </p>
+            </article>
+          ))
+        )}
       </div>
     </section>
 
@@ -148,6 +149,7 @@ const SessionsPage = () => {
       </div>
     </section>
   </PageContainer>
-);
+  );
+};
 
 export default SessionsPage;
