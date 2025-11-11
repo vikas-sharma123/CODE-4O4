@@ -51,9 +51,12 @@ export async function GET(request: Request) {
     }
 
     // Get upcoming sessions (next 5)
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+    
     const sessionsQuery = await db
       .collection("sessions")
-      .where("date", ">=", new Date().toISOString())
+      .where("date", ">=", todayStr)
       .orderBy("date", "asc")
       .limit(5)
       .get();
@@ -63,12 +66,17 @@ export async function GET(request: Request) {
       ...doc.data(),
     }));
 
+    // Get upcoming events count for stats
+    const eventsQuery = await db
+      .collection("events")
+      .where("date", ">=", todayStr)
+      .get();
+
     // Calculate stats
     const stats = {
       activeProjects: userProjects.length,
+      upcomingEvents: eventsQuery.size,
       upcomingSessions: sessions.length,
-      points: memberData?.points || 0,
-      badges: memberData?.badges || 0,
     };
 
     console.log("✅ Dashboard data fetched:", { stats, projectsCount: userProjects.length });
@@ -80,8 +88,6 @@ export async function GET(request: Request) {
           id: memberDoc.id,
           name: memberData?.name || "Member",
           email: memberData?.email || "",
-          points: memberData?.points || 0,
-          badges: memberData?.badges || 0,
           role: memberData?.role || "student",
           avatar: memberData?.avatar || "",
         },

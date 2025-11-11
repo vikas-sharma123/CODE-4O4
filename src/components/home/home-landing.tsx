@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -14,15 +14,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
-  adminQueue,
-  calendarSessions,
   featureCards,
   heroStats,
   journeySteps,
-  leaderboardPreview,
-  showcaseProjects,
   techStack,
-  upcomingEvents,
 } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { JoinClubModal } from "@/components/modals/join-club-modal";
@@ -38,6 +33,41 @@ export const HomeLanding = () => {
   const [loginOpen, setLoginOpen] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
   const router = useRouter();
+
+  // Dynamic data from Firebase
+  const [projects, setProjects] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch data from Firebase
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [projectsRes, eventsRes, sessionsRes] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/events"),
+          fetch("/api/sessions"),
+        ]);
+
+        const [projectsData, eventsData, sessionsData] = await Promise.all([
+          projectsRes.json(),
+          eventsRes.json(),
+          sessionsRes.json(),
+        ]);
+
+        if (projectsData.ok) setProjects(projectsData.data || []);
+        if (eventsData.ok) setEvents(eventsData.data || []);
+        if (sessionsData.ok) setSessions(sessionsData.data || []);
+      } catch (error) {
+        console.error("Error fetching home page data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleLogin = useCallback(() => {
     if (isAuthenticated) {
@@ -64,13 +94,13 @@ export const HomeLanding = () => {
             onLogin={handleLogin}
             user={user}
             isAuthenticated={isAuthenticated}
+            projects={projects}
+            sessions={sessions}
+            loading={loading}
           />
           <StatsRow />
           <FeatureGrid />
           <JourneySection />
-          <ProjectsAndEvents />
-          <CalendarLeaderboard />
-          <AdminSection user={user} isAuthenticated={isAuthenticated} />
           <Footer />
         </div>
       </div>
@@ -88,7 +118,6 @@ const navRoutes: Array<{ label: string; href: string; requiresAuth?: boolean }> 
   { label: "Projects", href: "/projects" },
   { label: "Events", href: "/events" },
   { label: "Sessions", href: "/sessions" },
-  { label: "Leaderboard", href: "/leaderboard" },
 ];
 
 const Header = ({
@@ -107,14 +136,14 @@ const Header = ({
   <header className="glass-panel flex flex-col gap-4 border border-white/10 px-6 py-4 md:flex-row md:items-center md:justify-between">
     <div className="flex items-center gap-3">
       <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00f5c4]/30 to-[#00a2ff]/30 font-semibold text-[#00f5c4]">
-        N
+        NST
       </div>
       <div>
         <p className="text-base font-semibold tracking-tight">
-          NSTSWC Dev Club
+          CODE 4O4 Dev Club
         </p>
         <p className="text-xs uppercase tracking-[0.25em] text-white/60">
-          {isAuthenticated ? "Portal Mode" : "Build · Learn · Grow"}
+          {isAuthenticated ? "" : "Build · Learn · Grow"}
         </p>
       </div>
     </div>
@@ -180,12 +209,22 @@ const Hero = ({
   onLogin,
   user,
   isAuthenticated,
+  projects,
+  sessions,
+  loading,
 }: {
   onJoin: () => void;
   onLogin: () => void;
   user: MaybeUser;
   isAuthenticated: boolean;
-}) => (
+  projects: any[];
+  sessions: any[];
+  loading: boolean;
+}) => {
+  const latestSession = sessions[0];
+  const activeProjects = projects.filter(p => p.status === "active").slice(0, 2);
+  
+  return (
   <section id="join" className="mt-16 grid gap-12 lg:grid-cols-[1.1fr_0.9fr]">
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -205,7 +244,7 @@ const Hero = ({
         <p className="mt-5 max-w-2xl text-lg text-white/70">
           {isAuthenticated
             ? "You are logged in. Jump into the dashboard, scan live events, or continue collaborating with your squad."
-            : "Join NSTSWC Dev Club to collaborate on ambitious projects, unlock portal-powered workspaces, get curated mentorship, and climb our gamified leaderboard."}
+            : "Join CODE4O4 Dev Club to collaborate on ambitious projects, unlock portal-powered workspaces, get curated mentorship, and climb our gamified leaderboard."}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-4">
@@ -243,80 +282,9 @@ const Hero = ({
         </Link>
       </div>
     </motion.div>
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2 }}
-      className="relative"
-    >
-      <div className="glow-border relative overflow-hidden p-6">
-        <div className="absolute inset-0 matrix-grid opacity-50" />
-        <div className="relative space-y-6">
-          <div className="flex items-center justify-between text-sm text-white/70">
-            <p>Live Portal</p>
-            <p className="flex items-center gap-1 text-emerald-300">
-              <Flame className="h-4 w-4" />
-              Active Sprint
-            </p>
-          </div>
-          <div className="rounded-3xl border border-white/10 bg-black/40 p-5">
-            <p className="text-sm uppercase tracking-[0.25em] text-white/60">
-              Projects
-            </p>
-            <div className="mt-4 space-y-4">
-              {showcaseProjects.slice(0, 2).map((project) => (
-                <div
-                  key={project.id}
-                  className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                >
-                  <div className="flex items-center justify-between text-sm text-white/80">
-                    <p className="font-semibold">{project.title}</p>
-                    <span
-                      className={cn(
-                        "rounded-full px-3 py-1 text-xs",
-                        project.status === "active"
-                          ? "bg-emerald-400/15 text-emerald-200"
-                          : project.status === "recruiting"
-                            ? "bg-sky-400/15 text-sky-200"
-                            : "bg-white/10 text-white/70",
-                      )}
-                    >
-                      {project.status}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-white/60">
-                    {project.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-3xl border border-white/10 bg-black/50 p-5">
-            <p className="text-sm uppercase tracking-[0.25em] text-white/60">
-              Upcoming Session
-            </p>
-            <div className="mt-4 flex items-center gap-4">
-              <div className="rounded-2xl border border-white/10 px-4 py-3 text-center">
-                <p className="text-3xl font-semibold text-emerald-300">21</p>
-                <p className="text-xs uppercase tracking-[0.3em] text-white/50">
-                  Jan
-                </p>
-              </div>
-              <div>
-                <p className="text-base font-semibold">
-                  Design Systems Guild
-                </p>
-                <p className="text-sm text-white/60">
-                  Tokens, theming, automation
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
   </section>
 );
+};
 
 const StatsRow = () => (
   <section className="mt-12 grid gap-6 rounded-3xl border border-white/10 bg-white/5 p-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -332,19 +300,11 @@ const StatsRow = () => (
 
 const FeatureGrid = () => (
   <section className="mt-16 space-y-6">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">
-          Why join
-        </p>
-        <h2 className="mt-2 text-3xl font-semibold">Designed for builders</h2>
-      </div>
-      <Link
-        href="/projects"
-        className="inline-flex items-center gap-2 rounded-full border border-white/15 px-5 py-2 text-sm text-white/80 transition hover:border-emerald-300 hover:text-white"
-      >
-        Full club tour <ChevronRight className="h-4 w-4" />
-      </Link>
+    <div>
+      <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">
+        Why join
+      </p>
+      <h2 className="mt-2 text-3xl font-semibold">Designed for builders</h2>
     </div>
     <div className="grid gap-6 md:grid-cols-2">
       {featureCards.map((feature) => {
@@ -393,14 +353,11 @@ const FeatureGrid = () => (
 
 const JourneySection = () => (
   <section className="mt-16 rounded-3xl border border-white/10 bg-white/5 p-8">
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">
-          Member journey
-        </p>
-        <h2 className="mt-2 text-3xl font-semibold">How the flow works</h2>
-      </div>
-      <Button variant="secondary">View Handbook</Button>
+    <div>
+      <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">
+        Member journey
+      </p>
+      <h2 className="mt-2 text-3xl font-semibold">How the flow works</h2>
     </div>
     <div className="mt-8 grid gap-6 md:grid-cols-3">
       {journeySteps.map((step) => (
@@ -426,275 +383,10 @@ const JourneySection = () => (
   </section>
 );
 
-const ProjectsAndEvents = () => (
-  <section className="mt-16 grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-    <div className="space-y-4 rounded-3xl border border-white/10 bg-black/45 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">
-            Live projects
-          </p>
-          <h3 className="text-2xl font-semibold">Request to join squads</h3>
-        </div>
-        <Link
-          href="/projects"
-          className="rounded-full border border-white/15 px-4 py-2 text-sm text-white/80 transition hover:border-emerald-200 hover:text-white"
-        >
-          View all
-        </Link>
-      </div>
-      <div className="space-y-4">
-        {showcaseProjects.map((project) => (
-          <div
-            key={project.id}
-            className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 md:flex-row md:items-center"
-          >
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <p className="text-lg font-semibold">{project.title}</p>
-                <span
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs capitalize",
-                    project.status === "active"
-                      ? "bg-emerald-400/15 text-emerald-200"
-                      : project.status === "recruiting"
-                        ? "bg-sky-400/15 text-sky-200"
-                        : "bg-white/10 text-white/70",
-                  )}
-                >
-                  {project.status}
-                </span>
-              </div>
-              <p className="text-sm text-white/60">{project.description}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/60">
-                {project.tech.map((stack) => (
-                  <span
-                    key={stack}
-                    className="rounded-full border border-white/15 px-3 py-1"
-                  >
-                    {stack}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col items-start gap-2 text-sm text-white/70">
-              <p>{project.owner}</p>
-              <p>{project.members} members</p>
-              <Button variant="outline" className="text-xs">
-                Request access
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-    <div className="space-y-4 rounded-3xl border border-white/10 bg-black/45 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">
-            Upcoming events
-          </p>
-          <h3 className="text-2xl font-semibold">Calendar drops</h3>
-        </div>
-        <Link
-          href="/events"
-          className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/70 transition hover:border-emerald-300 hover:text-white"
-        >
-          Upcoming list
-        </Link>
-      </div>
-      <div className="space-y-4">
-        {upcomingEvents.map((event) => (
-          <div
-            key={event.id}
-            className="rounded-2xl border border-white/10 bg-white/5 p-4"
-          >
-            <div className="flex items-center justify-between text-sm text-white/70">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-emerald-300" />
-                {formatDate(event.date, { month: "short", day: "numeric" })} ·{" "}
-                {event.time}
-              </div>
-              <span className="text-xs uppercase tracking-[0.25em] text-white/50">
-                {event.type}
-              </span>
-            </div>
-            <p className="mt-2 text-base font-semibold">{event.title}</p>
-            <p className="text-sm text-white/60">{event.summary}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/60">
-              <span>{event.location}</span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                {event.attendees}/{event.capacity} seats
-              </span>
-              <Button variant="outline" className="text-xs">
-                RSVP now
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-);
-
-const CalendarLeaderboard = () => (
-  <section className="mt-16 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-    <div className="rounded-3xl border border-white/10 bg-black/45 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">
-            Sessions timeline
-          </p>
-          <h3 className="text-2xl font-semibold">Calendar snapshots</h3>
-        </div>
-        <Link
-          href="/calendar"
-          className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/70 transition hover:border-emerald-300 hover:text-white"
-        >
-          View calendar
-        </Link>
-      </div>
-      <div className="mt-6 space-y-4">
-        {calendarSessions.map((session) => (
-          <div
-            key={session.id}
-            className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 md:flex-row md:items-center"
-          >
-            <div className="rounded-2xl border border-white/10 px-4 py-3 text-center">
-              <p className="text-2xl font-semibold text-emerald-200">
-                {new Date(session.date).getDate()}
-              </p>
-              <p className="text-xs uppercase tracking-[0.3em] text-white/50">
-                {new Date(session.date).toLocaleString("en-US", {
-                  month: "short",
-                })}
-              </p>
-            </div>
-            <div className="flex-1">
-              <p className="text-base font-semibold">{session.title}</p>
-              <p className="text-sm text-white/60">{session.focus}</p>
-            </div>
-            <span className="text-xs uppercase tracking-[0.3em] text-white/50">
-              {session.type}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-    <div className="space-y-6 rounded-3xl border border-white/10 bg-black/45 p-6">
-      <div>
-        <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">
-          Leaderboard
-        </p>
-        <h3 className="text-2xl font-semibold">Season 1 highlights</h3>
-        <p className="text-xs text-white/60">
-          Points unlock perks, access, and scholarships.
-        </p>
-      </div>
-      <div className="space-y-4">
-        {leaderboardPreview.map((entry) => (
-          <div
-            key={entry.id}
-            className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-lg font-semibold">
-              #{entry.rank}
-            </div>
-            <div className="flex-1">
-              <p className="text-base font-semibold">{entry.name}</p>
-              <p className="text-sm text-white/60">{entry.role}</p>
-            </div>
-            <div className="text-right text-sm">
-              <p className="font-semibold text-emerald-200">
-                {entry.points} pts
-              </p>
-              <p className="text-white/60">{entry.badges} badges</p>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="rounded-2xl border border-dashed border-white/20 p-4 text-sm text-white/60">
-        Leaderboard 2.0 launching soon with custom scoring for projects,
-        events, and mentorship time.
-      </div>
-    </div>
-  </section>
-);
-
-const AdminSection = ({
-  user,
-  isAuthenticated,
-}: {
-  user: MaybeUser;
-  isAuthenticated: boolean;
-}) => (
-  <section className="mt-16 rounded-3xl border border-white/10 bg-white/5 p-6">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">
-          Admin portal
-        </p>
-        <h3 className="text-2xl font-semibold">Pending approvals</h3>
-        <p className="text-sm text-white/60">
-          {isAuthenticated && user
-            ? `${user.name.split(" ")[0]}, every join request lands here for human review.`
-            : "Preview Member, every join request lands here for human review."}
-        </p>
-      </div>
-      <Link
-        href="/admin"
-        className="rounded-full border border-white/15 px-5 py-2 text-sm text-white/80 transition hover:border-emerald-200 hover:text-white"
-      >
-        {isAuthenticated ? "Open admin desk" : "Preview admin desk"}
-      </Link>
-    </div>
-    <div className="mt-6 grid gap-4 md:grid-cols-2">
-      {adminQueue.map((request) => (
-        <div
-          key={request.id}
-          className="rounded-2xl border border-white/10 bg-black/40 p-4"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-base font-semibold">{request.name}</p>
-              <p className="text-sm text-white/60">{request.email}</p>
-            </div>
-            <span className="rounded-full border border-white/15 px-3 py-1 text-xs">
-              {request.role}
-            </span>
-          </div>
-          <p className="mt-2 text-xs text-white/50">
-            Requested on {formatDate(request.requestedAt)}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/60">
-            {request.interests.map((interest) => (
-              <span
-                key={interest}
-                className="rounded-full border border-white/15 px-3 py-1"
-              >
-                {interest}
-              </span>
-            ))}
-          </div>
-          <div className="mt-4 flex gap-2">
-            <Button className="w-full text-sm">Approve</Button>
-            <Button variant="ghost" className="w-full text-sm">
-              Hold
-            </Button>
-          </div>
-        </div>
-      ))}
-    </div>
-  </section>
-);
-
 const Footer = () => (
   <footer className="mt-16 flex flex-col gap-4 rounded-3xl border border-white/10 bg-black/40 p-6 text-sm text-white/60 sm:flex-row sm:items-center sm:justify-between">
-    <p>© {new Date().getFullYear()} NSTSWC Dev Club · Firebase powered.</p>
+    <p>© {new Date().getFullYear()} CODE4O4 Dev Club</p>
     <div className="flex flex-wrap items-center gap-3">
-      <span>Preview build · front-end only</span>
-      <span className="text-emerald-200">Leaderboard 2.0 · Coming soon</span>
     </div>
   </footer>
 );

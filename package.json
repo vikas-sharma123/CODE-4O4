@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:events": "node scripts/seed-events.js",
+    "seed:sessions": "node scripts/seed-sessions.js",
+    "seed:all": "npm run seed:events && npm run seed:sessions"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
