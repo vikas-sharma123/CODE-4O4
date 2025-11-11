@@ -109,29 +109,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     username,
     password,
   }: LoginCredentials): Promise<ActionResult> => {
-    const normalized = username.trim().toLowerCase();
-    const match = credentialDirectory.find(
-      (entry) => entry.username === normalized,
-    );
+    try {
+      // First try the API for Firebase authentication
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (!match) {
-      return { ok: false, message: "No member found with that username." };
+      const result = await response.json();
+
+      if (result.ok && result.user) {
+        setUser(result.user);
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(result.user));
+        }
+        return {
+          ok: true,
+          message: result.message,
+          user: result.user,
+        };
+      }
+
+      // Fallback to hardcoded credentials for demo accounts
+      const normalized = username.trim().toLowerCase();
+      const match = credentialDirectory.find(
+        (entry) => entry.username === normalized,
+      );
+
+      if (!match) {
+        return { ok: false, message: "No member found with that username." };
+      }
+
+      if (match.password !== password) {
+        return { ok: false, message: "Incorrect password. Try again." };
+      }
+
+      setUser(match.profile);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(match.profile));
+      }
+
+      return {
+        ok: true,
+        message: `Welcome back, ${match.profile.name.split(" ")[0]}!`,
+        user: match.profile,
+      };
+    } catch (error) {
+      console.error("Login error:", error);
+      return { ok: false, message: "Login failed. Please try again." };
     }
-
-    if (match.password !== password) {
-      return { ok: false, message: "Incorrect password. Try again." };
-    }
-
-    setUser(match.profile);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(match.profile));
-    }
-
-    return {
-      ok: true,
-      message: `Welcome back, ${match.profile.name.split(" ")[0]}!`,
-      user: match.profile,
-    };
   }, []);
 
   const logout = useCallback(() => {
