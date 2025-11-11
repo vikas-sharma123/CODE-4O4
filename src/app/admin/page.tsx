@@ -38,6 +38,8 @@ const AdminPage = () => {
   const [pendingMembers, setPendingMembers] = useState<PendingMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"members" | "projects">("members");
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [credentials, setCredentials] = useState<{ userId: string; password: string; name: string; email: string } | null>(null);
 
   // Fetch pending members
   useEffect(() => {
@@ -113,19 +115,18 @@ const AdminPage = () => {
         const userId = result.userId || memberId;
         const tempPassword = result.tempPassword || "Welcome@123";
         
-        // Show credentials that need to be sent to the member
-        const message = `✅ Member Approved!\n\n` +
-          `Name: ${memberName}\n` +
-          `Email: ${memberEmail}\n` +
-          `User ID: ${userId}\n` +
-          `Temporary Password: ${tempPassword}\n\n` +
-          `Please send these credentials to the member via email.`;
-        
-        alert(message);
+        // Show credentials modal
+        setCredentials({
+          userId,
+          password: tempPassword,
+          name: memberName,
+          email: memberEmail,
+        });
+        setShowCredentialsModal(true);
         
         // Copy credentials to clipboard
-        const credentials = `User ID: ${userId}\nTemporary Password: ${tempPassword}`;
-        navigator.clipboard.writeText(credentials).then(() => {
+        const credentialsText = `User ID: ${userId}\nTemporary Password: ${tempPassword}`;
+        navigator.clipboard.writeText(credentialsText).then(() => {
           console.log("📋 Credentials copied to clipboard");
         });
         
@@ -287,6 +288,38 @@ const AdminPage = () => {
                   </div>
                 )}
 
+                {(member.github || member.portfolio) && (
+                  <div className="mb-4 flex flex-wrap gap-3 text-xs">
+                    {member.github && (
+                      <a
+                        href={`https://github.com/${member.github}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 transition"
+                      >
+                        🔗 GitHub: {member.github}
+                      </a>
+                    )}
+                    {member.portfolio && (
+                      <a
+                        href={member.portfolio}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-400 hover:text-purple-300 transition"
+                      >
+                        🌐 Portfolio
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {member.availability && (
+                  <div className="mb-4">
+                    <p className="text-xs text-white/50 mb-1">Availability:</p>
+                    <p className="text-sm text-white/70">{member.availability}</p>
+                  </div>
+                )}
+
                 <div className="mb-4 flex items-center gap-2 text-xs text-white/50">
                   <span>
                     Requested{" "}
@@ -392,9 +425,92 @@ const AdminPage = () => {
       </div>
     )}
 
-    <div className="mt-8 rounded-3xl border border-dashed border-white/20 p-5 text-sm text-white/70">
-      💡 <strong>Demo Mode:</strong> Approvals are logged but not persisted to database.
-      Connect Firebase credentials to enable full functionality.
+    {/* Credentials Modal */}
+    {showCredentialsModal && credentials && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="relative max-w-lg w-full rounded-3xl border border-emerald-400/30 bg-black/95 p-8">
+          <button
+            onClick={() => setShowCredentialsModal(false)}
+            className="absolute top-4 right-4 text-white/60 hover:text-white transition"
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-400/10 mb-4">
+              <CheckCircle className="h-8 w-8 text-emerald-400" />
+            </div>
+            <h3 className="text-2xl font-semibold text-white mb-2">
+              Member Approved!
+            </h3>
+            <p className="text-sm text-white/60">
+              {credentials.name} has been added to the club
+            </p>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p className="text-xs text-white/50 mb-1">Member Name</p>
+              <p className="text-white font-medium">{credentials.name}</p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p className="text-xs text-white/50 mb-1">Email</p>
+              <p className="text-white font-medium">{credentials.email}</p>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4">
+              <p className="text-xs text-emerald-400/70 mb-1">User ID</p>
+              <p className="text-emerald-300 font-mono text-sm">{credentials.userId}</p>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4">
+              <p className="text-xs text-emerald-400/70 mb-1">Temporary Password</p>
+              <p className="text-emerald-300 font-mono text-sm">{credentials.password}</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                const text = `User ID: ${credentials.userId}\nTemporary Password: ${credentials.password}`;
+                navigator.clipboard.writeText(text);
+                alert("📋 Credentials copied to clipboard!");
+              }}
+              className="w-full rounded-full bg-emerald-400/10 border border-emerald-400/30 px-6 py-3 text-sm font-medium text-emerald-400 transition hover:bg-emerald-400/20"
+            >
+              📋 Copy Credentials
+            </button>
+
+            <button
+              onClick={() => setShowCredentialsModal(false)}
+              className="w-full rounded-full border border-white/10 px-6 py-3 text-sm text-white/70 transition hover:bg-white/5"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="mt-6 rounded-xl bg-blue-400/5 border border-blue-400/20 p-4 text-xs text-blue-400/80">
+            <p className="font-medium text-blue-400 mb-1">📧 Next Step:</p>
+            <p>Send these credentials to {credentials.email} manually via email.</p>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <div className="mt-8 rounded-3xl border border-emerald-400/20 bg-emerald-400/5 p-5 text-sm text-emerald-400/90">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5">ℹ️</div>
+        <div>
+          <strong className="text-emerald-300">Admin Portal Instructions:</strong>
+          <ul className="mt-2 space-y-1 text-xs text-emerald-400/80">
+            <li>• <strong>Approve:</strong> Generates User ID and password, copies to clipboard, adds member to database</li>
+            <li>• <strong>Reject:</strong> Removes the request from pending list</li>
+            <li>• After approval, manually send the credentials to the member via email</li>
+            <li>• Page auto-refreshes every 5 seconds to show new requests</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </PageContainer>
   );

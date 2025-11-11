@@ -11,11 +11,37 @@ const getServiceAccount = (): ServiceAccount | null => {
     hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
     hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
     hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+    privateKeyLength: process.env.FIREBASE_PRIVATE_KEY?.length,
     nodeEnv: process.env.NODE_ENV,
     vercel: process.env.VERCEL,
   });
 
-  // First, try to get service account from environment variable (JSON string)
+  // PRIORITY 1: Try individual environment variables (most reliable)
+  const projectId = process.env.FIREBASE_PROJECT_ID?.trim();
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  
+  if (projectId && clientEmail && privateKey) {
+    console.log("✅ Using individual Firebase environment variables");
+    
+    // Handle escaped newlines in private key
+    // The private key might have literal \n strings that need to be converted to actual newlines
+    privateKey = privateKey.replace(/\\n/g, '\n');
+    
+    // Verify the private key format
+    if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+      console.error("❌ Private key doesn't have proper PEM header");
+      console.error("First 50 chars:", privateKey.substring(0, 50));
+    }
+    
+    return {
+      projectId,
+      clientEmail,
+      privateKey,
+    } as ServiceAccount;
+  }
+  
+  // PRIORITY 2: Fallback to FIREBASE_SERVICE_ACCOUNT JSON (less reliable)
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     try {
       console.log("📝 Attempting to parse FIREBASE_SERVICE_ACCOUNT...");
@@ -23,30 +49,14 @@ const getServiceAccount = (): ServiceAccount | null => {
       console.log("✅ Successfully parsed FIREBASE_SERVICE_ACCOUNT");
       console.log("📋 Project ID from parsed JSON:", parsed.project_id);
       return {
-        projectId: parsed.project_id,
-        privateKey: parsed.private_key.replace(/\\n/g, '\n'), // Convert escaped newlines to actual newlines
-        clientEmail: parsed.client_email,
+        projectId: parsed.project_id?.trim(),
+        privateKey: parsed.private_key?.replace(/\\n/g, '\n'),
+        clientEmail: parsed.client_email?.trim(),
       } as ServiceAccount;
     } catch (error) {
       console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT:", error);
       console.error("First 100 chars:", process.env.FIREBASE_SERVICE_ACCOUNT?.substring(0, 100));
     }
-  } else {
-    console.warn("⚠️  FIREBASE_SERVICE_ACCOUNT not found in environment");
-  }
-  
-  // Fallback: construct from individual environment variables
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-  
-  if (projectId && clientEmail && privateKey) {
-    console.log("✅ Using individual Firebase environment variables");
-    return {
-      projectId,
-      clientEmail,
-      privateKey: privateKey.replace(/\\n/g, '\n'), // Handle escaped newlines
-    } as ServiceAccount;
   }
   
   console.error("❌ No Firebase credentials found in environment variables");
