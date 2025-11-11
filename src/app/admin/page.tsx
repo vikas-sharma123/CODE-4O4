@@ -39,7 +39,7 @@ const AdminPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"members" | "projects">("members");
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
-  const [credentials, setCredentials] = useState<{ userId: string; password: string; name: string; email: string } | null>(null);
+  const [credentials, setCredentials] = useState<{ username: string; password: string; name: string; email: string } | null>(null);
 
   // Fetch pending members
   useEffect(() => {
@@ -119,7 +119,7 @@ const AdminPage = () => {
         
         // Show credentials modal
         setCredentials({
-          userId: username,
+          username: username,
           password: password,
           name: memberName,
           email: memberEmail,
@@ -463,7 +463,7 @@ const AdminPage = () => {
 
             <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4">
               <p className="text-xs text-emerald-400/70 mb-1">Username</p>
-              <p className="text-emerald-300 font-mono text-sm">{credentials.userId}</p>
+              <p className="text-emerald-300 font-mono text-sm">{credentials.username}</p>
             </div>
 
             <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4">
@@ -475,7 +475,7 @@ const AdminPage = () => {
           <div className="space-y-3">
             <button
               onClick={() => {
-                const text = `Username: ${credentials.userId}\nPassword: ${credentials.password}`;
+                const text = `Username: ${credentials.username}\nPassword: ${credentials.password}`;
                 navigator.clipboard.writeText(text);
                 alert("📋 Credentials copied to clipboard!");
               }}
@@ -506,7 +506,7 @@ const AdminPage = () => {
         <div>
           <strong className="text-emerald-300">Admin Portal Instructions:</strong>
           <ul className="mt-2 space-y-1 text-xs text-emerald-400/80">
-            <li>• <strong>Approve:</strong> Generates User ID and password, copies to clipboard, adds member to database</li>
+            <li>• <strong>Approve:</strong> Auto-generates username (firstname) and password (firstname123), copies to clipboard</li>
             <li>• <strong>Reject:</strong> Removes the request from pending list</li>
             <li>• After approval, manually send the credentials to the member via email</li>
             <li>• Page auto-refreshes every 5 seconds to show new requests</li>

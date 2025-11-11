@@ -1,0 +1,104 @@
+import { NextResponse } from "next/server";
+import { getDb } from "@/lib/firebase/admin";
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+
+    if (!userId) {
+      return NextResponse.json(
+        { ok: false, message: "User ID is required" },
+        { status: 400 },
+      );
+    }
+
+    console.log("🔄 Fetching dashboard data for user:", userId);
+
+    const db = getDb();
+
+    // Get user data from members collection
+    const memberDoc = await db.collection("members").doc(userId).get();
+    
+    if (!memberDoc.exists) {
+      return NextResponse.json(
+        { ok: false, message: "Member not found" },
+        { status: 404 },
+      );
+    }
+
+    const memberData = memberDoc.data();
+
+    // Get user's projects (where they are a member)
+    const projectMembersQuery = await db
+      .collection("projectMembers")
+      .where("userId", "==", userId)
+      .get();
+
+    const projectIds = projectMembersQuery.docs.map(doc => doc.data().projectId);
+    
+    let userProjects: any[] = [];
+    if (projectIds.length > 0) {
+      const projectsPromises = projectIds.map(async (projectId) => {
+        const projectDoc = await db.collection("projects").doc(projectId).get();
+        if (projectDoc.exists) {
+          return { id: projectDoc.id, ...projectDoc.data() };
+        }
+        return null;
+      });
+      const projectsResults = await Promise.all(projectsPromises);
+      userProjects = projectsResults.filter(p => p !== null);
+    }
+
+    // Get upcoming sessions (next 5)
+    const sessionsQuery = await db
+      .collection("sessions")
+      .where("date", ">=", new Date().toISOString())
+      .orderBy("date", "asc")
+      .limit(5)
+      .get();
+
+    const sessions = sessionsQuery.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // Calculate stats
+    const stats = {
+      activeProjects: userProjects.length,
+      upcomingSessions: sessions.length,
+      points: memberData?.points || 0,
+      badges: memberData?.badges || 0,
+    };
+
+    console.log("✅ Dashboard data fetched:", { stats, projectsCount: userProjects.length });
+
+    return NextResponse.json({
+      ok: true,
+      data: {
+        member: {
+          id: memberDoc.id,
+          name: memberData?.name || "Member",
+          email: memberData?.email || "",
+          points: memberData?.points || 0,
+          badges: memberData?.badges || 0,
+          role: memberData?.role || "student",
+          avatar: memberData?.avatar || "",
+        },
+        stats,
+        projects: userProjects,
+        sessions,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Error fetching dashboard data:", error);
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Failed to fetch dashboard data",
+        error: String(error),
+      },
+      { status: 500 },
+    );
+  }
+}
